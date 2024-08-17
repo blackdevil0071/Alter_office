@@ -1,0 +1,67 @@
+.comment-container {
+  padding: 20px;
+  width: 100%; 
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+}
+
+.user-image {
+  width: 44px;
+  height: 44px;
+  margin-right: 10px;
+}
+
+.comment-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 21px;
+  color: #303030;
+}
+
+.comment-time {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #a4a4a4;
+}
+
+.comment-text {
+  margin: 10px 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: #747373;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-button {
+  background: none;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14.5px;
+  color: #343434;
+  cursor: pointer;
+}
+
+img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.replies{
+    margin-left: 3vh;
+}
