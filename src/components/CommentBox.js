@@ -1,113 +1,83 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { FiPaperclip } from "react-icons/fi";
+import { storage } from '../Firebase';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import './CommentBox.css';
 
 const CommentBox = ({ onPostComment }) => {
-  const [message, setMessage] = useState('Hi @Jo'); // State for the editable message
-  const [attachment, setAttachment] = useState(null); // State for file attachments
+  const [message, setMessage] = useState('');
+  const [attachmentURL, setAttachmentURL] = useState(null);
   const characterLimit = 250;
+  const textareaRef = useRef(null);
 
-  // Handle message change
   const handleMessageChange = (e) => {
-    const text = e.target.value;
+    const text = e.target.innerHTML;
     if (text.length <= characterLimit) {
-      setMessage(text); // Update the message text
+      setMessage(text);
     }
   };
 
-  // Apply formatting to the selected text
-  const handleFormat = (formatType) => {
-    const textarea = document.querySelector('.text-area');
-    const { selectionStart, selectionEnd } = textarea;
-    const selectedText = message.substring(selectionStart, selectionEnd);
-
-    if (selectedText) {
-      let formattedText = '';
-      switch (formatType) {
-        case 'bold':
-          formattedText = `**${selectedText}**`;
-          break;
-        case 'italic':
-          formattedText = `*${selectedText}*`;
-          break;
-        case 'underline':
-          formattedText = `__${selectedText}__`;
-          break;
-        default:
-          formattedText = selectedText;
-      }
-
-      setMessage(prevMessage => {
-        return prevMessage.slice(0, selectionStart) + formattedText + prevMessage.slice(selectionEnd);
-      });
-    }
+  const handleFormat = (command) => {
+    document.execCommand(command, false, null);
+    textareaRef.current.focus();
   };
 
-  // Handle file change
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setAttachment(URL.createObjectURL(file));
+      try {
+        const storageRef = ref(storage, `attachments/${file.name}`);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        setAttachmentURL(url);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+      }
     }
   };
 
   const handlePost = () => {
-    onPostComment(message, attachment); // Pass both message and attachment
-    setMessage(''); // Clear the message
-    setAttachment(null); // Clear the attachment
+    const messageWithImage = attachmentURL 
+      ? `${message}<br/><img src="${attachmentURL}" alt="attachment" class="comment-image"/>` 
+      : message;
+    
+    onPostComment(messageWithImage, attachmentURL);
+    setMessage('');
+    setAttachmentURL(null);
+    textareaRef.current.innerHTML = '';
   };
 
   return (
     <div className="comment-box">
-      <textarea
+      <div
         className="text-area"
-        value={message}
-        onChange={handleMessageChange}
+        contentEditable
+        ref={textareaRef}
+        onInput={handleMessageChange}
         placeholder="Type your comment here..."
+        suppressContentEditableWarning={true}
       />
       <div className="toolbar">
-        <div className="formats">
-          <span
-            className="format"
-            aria-label="bold"
-            onClick={() => handleFormat('bold')}
-          >
-            B
-          </span>
-          <span
-            className="format"
-            aria-label="italic"
-            onClick={() => handleFormat('italic')}
-          >
-            I
-          </span>
-          <span
-            className="format"
-            aria-label="underline"
-            onClick={() => handleFormat('underline')}
-          >
-            U
-          </span>
-          <label className="attachment-icon" aria-label="attachment">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
-            <FiPaperclip />
-          </label>
-        </div>
+        <button className="format" onClick={() => handleFormat('bold')}>B</button>
+        <button className="format" onClick={() => handleFormat('italic')}>I</button>
+        <button className="format" onClick={() => handleFormat('underline')}>U</button>
+        <label className="attachment-icon" aria-label="attachment">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+          <FiPaperclip />
+        </label>
       </div>
       <div className="comment-footer">
         <span className="char-count">{message.length}/{characterLimit}</span>
-        <button className="send-button" onClick={handlePost}>
-          Send
-        </button>
+        <button className="send-button" onClick={handlePost}>Send</button>
       </div>
-      {attachment && (
+      {attachmentURL && (
         <div className="attachment-preview">
-          <img src={attachment} alt="Attachment preview" />
+          <img src={attachmentURL} alt="Attachment preview" />
         </div>
       )}
     </div>

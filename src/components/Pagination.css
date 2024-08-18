@@ -1,11 +1,11 @@
-/* Pagination Controls */
-.pagination-controls {
+/* Pagination Styles */
+.pagination {
   display: flex;
   justify-content: center;
   margin-top: 20px;
 }
 
-.pagination-button {
+.pagination button {
   margin: 0 5px;
   padding: 8px 12px;
   background-color: #e0e0e0;
@@ -14,12 +14,16 @@
   border-radius: 5px;
 }
 
-.pagination-button.active {
-  background-color: #424242;
-  color: #fff;
+.pagination button:disabled {
+  background-color: #d0d0d0;
+  cursor: not-allowed;
 }
 
-/* Toast Message */
+.pagination span {
+  margin: 0 10px;
+}
+
+/* Toast Message Styles */
 .toast {
   position: fixed;
   bottom: 20px;

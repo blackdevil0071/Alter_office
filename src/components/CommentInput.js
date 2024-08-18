@@ -1,98 +1,92 @@
-import React, { useState, useRef } from "react";
-import "./CommentInput.css";
+import React, { useState, useRef } from 'react';
+import { FiPaperclip } from "react-icons/fi";
+import './CommentInput.css';
 
 const CommentInput = ({ onSend, onCancel }) => {
-  const [commentText, setCommentText] = useState("");
-  const [attachedFile, setAttachedFile] = useState(null);
-  const [taggedUsers, setTaggedUsers] = useState([]);
+  const [message, setMessage] = useState('');
+  const [attachmentURL, setAttachmentURL] = useState(null);
   const characterLimit = 250;
   const textareaRef = useRef(null);
 
-  const handleInputChange = (e) => {
-    if (e.target.value.length <= characterLimit) {
-      setCommentText(e.target.value);
+  const handleMessageChange = (e) => {
+    const text = e.target.innerHTML;
+    if (text.length <= characterLimit) {
+      setMessage(text);
     }
   };
 
-  const handleAttachFile = (e) => {
-    setAttachedFile(e.target.files[0]);
+  const handleFormat = (command) => {
+    document.execCommand(command, false, null);
+    textareaRef.current.focus();
   };
 
-  const applyFormatting = (prefix, suffix) => {
-    const textarea = textareaRef.current;
-    const { selectionStart, selectionEnd } = textarea;
-    const before = commentText.substring(0, selectionStart);
-    const selected = commentText.substring(selectionStart, selectionEnd);
-    const after = commentText.substring(selectionEnd);
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        const url = URL.createObjectURL(file); // For preview purposes
+        setAttachmentURL(url);
+      } catch (error) {
+        console.error("Error uploading file:", error);
+      }
+    }
+  };
+
+  const handlePost = () => {
+    const messageWithImage = attachmentURL 
+      ? `${message}<br/><img src="${attachmentURL}" alt="attachment" class="comment-image"/>` 
+      : message;
     
-    setCommentText(`${before}${prefix}${selected}${suffix}${after}`);
-    
-    // Set cursor position after the formatting
-    textarea.selectionStart = textarea.selectionEnd = selectionStart + prefix.length + selected.length + suffix.length;
-  };
-
-  const handleBold = () => applyFormatting("**", "**");
-  const handleItalic = () => applyFormatting("_", "_");
-  const handleUnderline = () => applyFormatting("__", "__");
-  const handleHyperlink = () => {
-    const url = prompt("Enter the URL:");
-    if (url) {
-      applyFormatting(`[${getSelectedText()}](${url})`, "");
-    }
-  };
-
-  const handleTagUser = (user) => {
-    setTaggedUsers([...taggedUsers, user]);
-    setCommentText(commentText + ` @${user} `);
-  };
-
-  const handleSend = () => {
-    if (commentText.trim()) {
-      onSend(commentText, attachedFile, taggedUsers);
-      setCommentText("");
-      setAttachedFile(null);
-      setTaggedUsers([]);
-    }
-  };
-
-  const getSelectedText = () => {
-    const textarea = textareaRef.current;
-    const { selectionStart, selectionEnd } = textarea;
-    return commentText.substring(selectionStart, selectionEnd);
-  };
-
-  const openFileDialog = () => {
-    document.getElementById("file-upload").click();
+    onSend(messageWithImage, attachmentURL);
+    setMessage('');
+    setAttachmentURL(null);
+    textareaRef.current.innerHTML = '';
   };
 
   return (
     <div className="comment-input-container">
-      <textarea
+      <div
+        className="text-area"
+        contentEditable
         ref={textareaRef}
-        className="comment-input-textarea"
+        onInput={handleMessageChange}
         placeholder="Type your comment here..."
-        value={commentText}
-        onChange={handleInputChange}
+        suppressContentEditableWarning={true}
       />
       <div className="comment-input-toolbar">
-        <button onClick={handleBold}><strong>B</strong></button>
-        <button onClick={handleItalic}><em>I</em></button>
-        <button onClick={handleUnderline}><u>U</u></button>
-        
+        <button onClick={() => handleFormat('bold')}><strong>B</strong></button>
+        <button onClick={() => handleFormat('italic')}><em>I</em></button>
+        <button onClick={() => handleFormat('underline')}><u>U</u></button>
+        <button onClick={() => {
+          const url = prompt("Enter the URL:");
+          if (url) {
+            document.execCommand('createLink', false, url);
+            textareaRef.current.focus();
+          }
+        }}>Link</button>
+        <label className="attachment-icon" aria-label="attachment">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+          <FiPaperclip />
+        </label>
+
       </div>
       <div className="comment-input-footer">
-        <span className="char-count">{commentText.length}/{characterLimit}</span>
-        <div className="comment-input-buttons">
-
-        <button className="cancel-button" onClick={onCancel}>
-            Cancel
-          </button>
-                    <button className="send-button" onClick={handleSend}>
-            Send
-          </button>
-
-        </div>
+        <span className="char-count">{message.length}/{characterLimit}</span>
+        <button className="cancel-button" onClick={onCancel}>Cancel</button>
+        <button className="send-button" onClick={handlePost}>
+          Send
+        </button>
       </div>
+      {attachmentURL && (
+        <div className="attachment-preview">
+          <img src={attachmentURL} alt="Attachment preview" />
+        </div>
+      )}
     </div>
   );
 };

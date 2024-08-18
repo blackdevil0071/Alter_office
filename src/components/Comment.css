@@ -1,6 +1,6 @@
 .comment-container {
   padding: 20px;
-  width: 100%; 
+  width: 100%;
 }
 
 .comment-header {
@@ -8,9 +8,10 @@
   align-items: center;
 }
 
-.user-image {
+.comment-avatar {
   width: 44px;
   height: 44px;
+  border-radius: 50%;
   margin-right: 10px;
 }
 
@@ -43,6 +44,7 @@
 
 .comment-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
@@ -56,12 +58,56 @@
   cursor: pointer;
 }
 
-img {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+.emoji-container {
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
-.replies{
-    margin-left: 3vh;
+.emoji-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+}
+
+.emoji-picker {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid #ddd;
+  padding: 5px;
+  background-color: white;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+}
+
+.emoji-option {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  margin: 0 5px;
+}
+
+.emoji-option.selected {
+  background-color: #f0f0f0;
+  border-radius: 4px;
+}
+
+.show-more {
+  display: block;
+}
+
+.replies {
+  margin-left: 3vh;
+}
+
+.comment-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 10px;
 }

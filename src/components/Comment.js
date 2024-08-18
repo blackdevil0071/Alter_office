@@ -1,15 +1,22 @@
 import React, { useState, useRef, useEffect } from "react";
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { db } from "../Firebase";
 import "./Comment.css";
 import CommentInput from "./CommentInput";
 
 
-function Comment({ name, text, time, profilePic, onReply, replies }) {
+
+function Comment({ id, name, text, time, profilePic, onReply, replies }) {
   const [isReplying, setIsReplying] = useState(false);
   const [showMore, setShowMore] = useState(false);
-  const [likes, setLikes] = useState(0);
-  const [dislikes, setDislikes] = useState(0);
+  const [reactions, setReactions] = useState({});
+  const [selectedEmoji, setSelectedEmoji] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  const emojiList = ["😀", "❤️", "👍", "😢", "😠"];
   const commentRef = useRef(null);
+  const auth = getAuth();
 
   useEffect(() => {
     if (commentRef.current) {
@@ -17,33 +24,59 @@ function Comment({ name, text, time, profilePic, onReply, replies }) {
     }
   }, [text]);
 
-  const handleReplyClick = () => {
-    setIsReplying(true);
-  };
+  useEffect(() => {
+    const fetchReactions = async () => {
+      try {
+        const commentDoc = await getDoc(doc(db, "comments", id));
+        if (commentDoc.exists()) {
+          setReactions(commentDoc.data().reactions || {});
+          const userReaction = commentDoc.data().userReactions?.[auth.currentUser?.uid] || null;
+          setSelectedEmoji(userReaction);
+        }
+      } catch (error) {
+        console.error("Error fetching reactions: ", error);
+      }
+    };
 
-  const handleCancelReply = () => {
+    fetchReactions();
+  }, [id, auth.currentUser?.uid]);
+
+  const handleReplyClick = () => setIsReplying(true);
+  const handleCancelReply = () => setIsReplying(false);
+  const handleSendReply = (replyText) => {
+    onReply(id, replyText);
     setIsReplying(false);
   };
 
-  const handleSendReply = (replyText) => {
-    onReply(replyText);
-    setIsReplying(false); // Close the reply input after sending
+  const toggleShowMore = () => setShowMore(prev => !prev);
+  const handleEmojiClick = async (emoji) => {
+    if (!auth.currentUser) return;
+
+    const userReaction = selectedEmoji === emoji;
+    const reactionUpdate = userReaction ? arrayRemove(emoji) : arrayUnion(emoji);
+
+    try {
+      await updateDoc(doc(db, "comments", id), {
+        [`reactions.${emoji}`]: reactionUpdate,
+        [`userReactions.${auth.currentUser.uid}`]: userReaction ? "" : emoji
+      });
+
+      setReactions(prev => ({
+        ...prev,
+        [emoji]: userReaction ? (prev[emoji] || 0) - 1 : (prev[emoji] || 0) + 1
+      }));
+      setSelectedEmoji(userReaction ? null : emoji);
+      setShowEmojiPicker(false);
+    } catch (error) {
+      console.error("Error updating reaction: ", error);
+    }
   };
 
-  const toggleShowMore = () => {
-    setShowMore(!showMore);
-  };
-
-  const handleLike = () => {
-    setLikes(likes + 1);
-  };
-
-  const handleDislike = () => {
-    setDislikes(dislikes + 1);
-  };
+  const toggleEmojiPicker = () => setShowEmojiPicker(prev => !prev);
 
   const formattedTime = () => {
-    const diff = Math.floor((Date.now() - new Date(time).getTime()) / 1000);
+    const commentDate = time.toDate ? time.toDate() : new Date(time);
+    const diff = Math.floor((Date.now() - commentDate.getTime()) / 1000);
     if (diff < 60) return `${diff} seconds ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
@@ -60,21 +93,31 @@ function Comment({ name, text, time, profilePic, onReply, replies }) {
           <div className="user-name">{name}</div>
         </div>
       </div>
-      <div className="comment-text" ref={commentRef}>
-        {commentText}
-        {isOverflowing && (
-          <button className="show-more" onClick={toggleShowMore}>
-            {showMore ? "Show less" : "Show more"}
-          </button>
-        )}
-      </div>
+      <div className="comment-text" ref={commentRef} dangerouslySetInnerHTML={{ __html: commentText }} />
+      {isOverflowing && (
+        <button className="show-more" onClick={toggleShowMore}>
+          {showMore ? "Show less" : "Show more"}
+        </button>
+      )}
       <div className="comment-actions">
-        <button className="action-button" onClick={handleLike}>
-          👍 {likes}
-        </button>
-        <button className="action-button" onClick={handleDislike}>
-          👎 {dislikes}
-        </button>
+        <div className="emoji-container">
+          <button className="emoji-button" onClick={toggleEmojiPicker}>
+            {selectedEmoji ? selectedEmoji : "😊"}
+          </button>
+          {showEmojiPicker && (
+            <div className="emoji-picker">
+              {emojiList.map(emoji => (
+                <button
+                  key={emoji}
+                  className={`emoji-option ${selectedEmoji === emoji ? 'selected' : ''}`}
+                  onClick={() => handleEmojiClick(emoji)}
+                >
+                  {emoji} {reactions[emoji] || 0}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button className="action-button" onClick={handleReplyClick}>
           Reply
         </button>
@@ -90,11 +133,13 @@ function Comment({ name, text, time, profilePic, onReply, replies }) {
       <div className="replies">
         {replies && replies.map((reply, index) => (
           <Comment 
-            key={index} 
+            key={index}
+            id={reply.id}
             name={reply.name} 
             text={reply.text} 
             time={reply.time} 
             profilePic={reply.profilePic} 
+            replies={reply.replies}
             onReply={() => {}} 
           />
         ))}
